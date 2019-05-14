@@ -1,0 +1,111 @@
+property startTime : 7
+property dueTime : 15
+
+
+
+tell application "OmniFocus"
+	tell front document
+		set theInbox to every inbox task
+		if theInbox is not equal to {} then
+			repeat with n from 1 to length of theInbox
+				set currentTask to item n of theInbox
+				set curStatus to completed of currentTask
+				if curStatus = false then --find unfinished tasks
+					set curTitle to name of currentTask
+					set dueDate to due date of currentTask
+					set startDate to defer date of currentTask
+
+
+					if startDate is missing value then
+						-- display dialog "Start Date Missing: " & curTitle
+						set currDate to (current date) - (time of (current date))
+						set succeeded to my startToday(currentTask, currDate)
+
+
+					end if
+
+					if dueDate is missing value then
+						-- display dialog "Due Date Missing: " & curTitle
+
+						-- set myDate to my convertDate("2019-07-01")
+						-- set myDate to (myDate) - (time of (myDate)) -- remove hours
+						-- set succeeded to my startToday(currentTask, currDate)
+
+						set currDate to (current date) - (time of (current date))
+						set myNewDate to currDate + (7 * days)
+						set succeeded to my dueToday(currentTask, myNewDate)
+
+
+
+					end if
+				end if
+			end repeat
+		end if
+	end tell
+end tell
+
+
+on startToday(selectedItem, currDate)
+	set success to false
+	tell application "OmniFocus"
+		try
+			set originalStartDateTime to defer date of selectedItem
+			if (originalStartDateTime is not missing value) then
+				--Set new start date with original start time
+				set defer date of selectedItem to (currDate + (time of originalStartDateTime))
+				set success to true
+			else
+				set defer date of selectedItem to (currDate + (startTime * hours))
+				set success to true
+			end if
+		end try
+	end tell
+	return success
+end startToday
+
+on dueToday(selectedItem, currDate)
+	set success to false
+	tell application "OmniFocus"
+		try
+			set originalDueDateTime to due date of selectedItem
+			if (originalDueDateTime is not missing value) then
+				--Set new due date with original due time
+				set originalDueStartDate to originalDueDateTime - (time of originalDueDateTime)
+				set theDelta to (currDate - originalDueStartDate) / 86400
+				set newDueDateTime to (originalDueDateTime + (theDelta * days))
+				set due date of selectedItem to newDueDateTime
+				set originalStartDateTime to defer date of selectedItem
+				if (originalStartDateTime is not missing value) then
+					set newStartDateTime to (originalStartDateTime + (theDelta * days))
+					set defer date of selectedItem to newStartDateTime
+				end if
+				set success to true
+			else
+				set due date of selectedItem to (currDate + (dueTime * hours))
+				set success to true
+			end if
+		end try
+	end tell
+	return success
+end dueToday
+
+-- Convert date function. Call with string in YYYY-MM-DD HH:MM:SS format (time part optional)
+to convertDate(textDate)
+	set resultDate to the current date
+
+	set the year of resultDate to (text 1 thru 4 of textDate)
+	set the month of resultDate to (text 6 thru 7 of textDate)
+	set the day of resultDate to (text 9 thru 10 of textDate)
+	set the time of resultDate to 0
+
+	if (length of textDate) > 10 then
+		set the hours of resultDate to (text 12 thru 13 of textDate)
+		set the minutes of resultDate to (text 15 thru 16 of textDate)
+
+		if (length of textDate) > 16 then
+			set the seconds of resultDate to (text 18 thru 19 of textDate)
+		end if
+	end if
+
+	return resultDate
+end convertDate

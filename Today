@@ -1,0 +1,68 @@
+property startTime : 7
+property dueTime : 15
+
+
+tell application "OmniFocus"
+	tell content of first document window of front document
+		--Get selection
+		set totalMinutes to 0
+		set validSelectedItemsList to value of (selected trees where class of its value is not item and class of its value is not folder)
+		set totalItems to count of validSelectedItemsList
+
+		--Perform action
+		set successTot to 0
+		set autosave to false
+		set currDate to (current date) - (time of (current date))
+		repeat with thisItem in validSelectedItemsList
+			set succeeded to my startToday(thisItem, currDate)
+			if succeeded then set successTot to successTot + 1
+			set succeeded to my dueToday(thisItem, currDate)
+			if succeeded then set successTot to successTot + 1
+		end repeat
+		set autosave to true
+	end tell
+end tell
+
+on startToday(selectedItem, currDate)
+	set success to false
+	tell application "OmniFocus"
+		try
+			set originalStartDateTime to defer date of selectedItem
+			if (originalStartDateTime is not missing value) then
+				--Set new start date with original start time
+				set defer date of selectedItem to (currDate + (time of originalStartDateTime))
+				set success to true
+			else
+				set defer date of selectedItem to (currDate + (startTime * hours))
+				set success to true
+			end if
+		end try
+	end tell
+	return success
+end startToday
+
+on dueToday(selectedItem, currDate)
+	set success to false
+	tell application "OmniFocus"
+		try
+			set originalDueDateTime to due date of selectedItem
+			if (originalDueDateTime is not missing value) then
+				--Set new due date with original due time
+				set originalDueStartDate to originalDueDateTime - (time of originalDueDateTime)
+				set theDelta to (currDate - originalDueStartDate) / 86400
+				set newDueDateTime to (originalDueDateTime + (theDelta * days))
+				set due date of selectedItem to newDueDateTime
+				set originalStartDateTime to defer date of selectedItem
+				if (originalStartDateTime is not missing value) then
+					set newStartDateTime to (originalStartDateTime + (theDelta * days))
+					set defer date of selectedItem to newStartDateTime
+				end if
+				set success to true
+			else
+				set due date of selectedItem to (currDate + (dueTime * hours))
+				set success to true
+			end if
+		end try
+	end tell
+	return success
+end dueToday
